@@ -54,6 +54,7 @@ rsqSimpleLinMSex.n = zeros(nrow, 1);
 rsqSimpleLinMSex.p_value = zeros(nrow, 1); 
 rsqSimpleLinMSex.rmse = zeros(nrow, 1); 
 
+nfig=0;
 for t = 1:length(tractIDs)
     
     nfig = nfig + 1;
@@ -65,7 +66,7 @@ for t = 1:length(tractIDs)
     hold on 
     
     %==================== Math ====================
-    %plotting a nonlinear aggression model 
+    %plotting a nonlinear reggression model 
     MathTBL = table(d.subIDs, math, 'VariableNames', {'Subject', 'Data'});  
     MathTBL = MathTBL(~any(ismissing(MathTBL), 2), :);
     MathTBL = sortrows(MathTBL); 
@@ -90,23 +91,35 @@ for t = 1:length(tractIDs)
     
     tbl(any(ismissing(tbl), 2), :) = [];
     
-    Math = tbl.Math; 
-    xVar = tbl.xVar; 
-    Sex = tbl.Sex; 
+%     Math = tbl.Math; 
+%     xVar = tbl.xVar; 
+%     Sex = tbl.Sex; 
       
     %z-score xVar and Math    
-    xVar = zscore(xVar, [], 'omitnan');
-    Math = zscore(Math, [], 'omitnan');
+    xVar = zscore(tbl.xVar, [], 'omitnan');
+    Math = zscore(tbl.Math, [], 'omitnan');
 
-    %Check correlation between Sex and Math
-    P = 'Math ~ Sex'; 
-    mdlMSex = fitlm(tbl, P);
+    % @Zoha -- I am adding this here so that outlier removals from this
+    % point on do not affect all of the other tracts and behavioral
+    % measures contained in tbl. I see that you are recreating tbl with
+    % each loop, so it's not super important, but it helps keep things more
+    % easily interpretable.
+    tb = array2table([xVar Math], 'VariableNames', {'xVar', 'Math'});
+
+    % Remove outliers, extreme z-scores, on either measure.
+    idx_remove = unique([find(abs(tb.xVar) >= 2.5); find(abs(tb.Math) >= 2.5)]);
+    if ~isempty(idx_remove); tb(idx_remove, :) = []; end
+    clear idx_remove
+
+%     %Check correlation between Sex and Math
+%     P = 'Math ~ Sex'; 
+%     mdlMSex = fitlm(tbl, P);
     
     %%defining the line to fit the model to
     Q = 'Math ~ xVar';
 
     %generating the model
-    mdl = fitlm(tbl, Q);
+    mdl = fitlm(tb, Q);
     
     %get appropriate RGB color for tract by indexing into colorProfiles.csv
     idx = find(strcmp(colorProfiles.NameOfTrack, char(tractIDs(t))) == 1);
@@ -158,12 +171,12 @@ for t = 1:length(tractIDs)
     clf;
 
     %Remove outliers
-    tbl(outliers, :) = []; 
+    tb(outliers, :) = []; 
 
     %recalculate the model
 
     %generating the model
-    mdl = fitlm(tbl, Q);
+    mdl = fitlm(tb, Q);
 
     %clear figure
     clf(figure(nfig));
@@ -248,6 +261,13 @@ for t = 1:length(tractIDs)
     fontsize = 50;
     fontangle = 'italic';
     
+    %adding title and color to the model
+    plotTitle = {char(tractIDs(t))};
+    plotTitle = strjoin(['Simple Linear Model for', plotTitle]);
+    title(plotTitle);
+    xlabel(wmmeasure);
+    ylabel('Math Scores');
+
     yticklength = 0;
     xticklength = 0.02;
 
@@ -259,7 +279,7 @@ for t = 1:length(tractIDs)
     %maxX = floor(max(xData) * 100) / 100;
     %midX = floor(((min(xData) + max(xData))/2) * 100) / 100; 
     %set(gca, 'XLim', [minX maxX], 'XTick', [minX midX maxX]);
-    set(gca, 'XLim', [0.3 0.5], 'XTick', [0.3 0.4 0.5]);
+    set(gca, 'XLim', [-3 3], 'XTick', [-3 -2 -1 0 1 2 3]);
     xax.FontName = fontname;
     xax.FontSize = fontsize;
 
@@ -267,10 +287,16 @@ for t = 1:length(tractIDs)
     yax = get(gca,'yaxis');
     yax.TickDirection = 'out';
     yax.TickLength = [yticklength yticklength];
-    set(gca, 'YLim', [-5 10], 'YTick', [-5 0 5 10]);
+    set(gca, 'YLim', [-3 3], 'YTick', [-3 -2 -1 0 1 2 3]);
     yax.FontName = fontname;
     yax.FontSize = fontsize;
     yax.FontAngle = fontangle;
+
+    %%%%%%To print on plots
+    text(-2.8, 2.2, ['rmse = ' num2str(mdl.RMSE)])
+    text(-2.8, 2.0, ['beta = ' num2str(mdl.Coefficients{2,1})])
+    text(-2.8, 1.8, ['p = ' num2str(mdl.Coefficients.pValue(2))])
+    text(-2.8, 1.6, ['n = ' num2str(n)]);
 
     %change figure background to white
     set(gcf, 'color', 'w')
@@ -278,13 +304,6 @@ for t = 1:length(tractIDs)
     %===========================================================================
     
     hold off
-    
-    %adding title and color to the model
-    plotTitle = {char(tractIDs(t))};
-    plotTitle = strjoin(['Simple Linear Model for', plotTitle]);
-    title(plotTitle);
-    xlabel(measure);
-    ylabel('Math Scores');
     
     %export figure as a png file
     mainpath = '/Volumes/LANDLAB/projects/sfa/supportFiles/final-plots';
