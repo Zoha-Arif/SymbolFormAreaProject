@@ -1,2 +1,2 @@
-# sfa_temp
-sfa_letters_numbers
+# Symbol Form Area Project
+ Statistical analysis and figure creation for Aim 1B which is to investigate the relationships among the tissue properties (i.e., FA, MD, ODI, NDI) of structural connections and individual differences in reading ability and math ability (i.e., T1 behavioral data) and reading and math learning (i.e., T2 behavioral data minus T1 behavioral data), using the structural connectivity identified in Aim 1A.
