@@ -94,23 +94,30 @@ for t = 1:length(tractIDs)
     
     tbl(any(ismissing(tbl), 2), :) = [];
     
-    Math = tbl.Math; 
-    xVar = tbl.xVar; 
-    Sex = tbl.Sex; 
+    %z-score xVar and Math    
+    xVar = zscore(tbl.xVar, [], 'omitnan');
+    Math = zscore(tbl.Math, [], 'omitnan');
+    Sex = tbl.Sex;
+
+    % Subsetting tbl into tb so that outlier removals from this
+    % point on do not affect all of the other tracts and behavioral
+    % measures contained in tbl.
+    tb = array2table([xVar Math Sex], 'VariableNames', {'xVar', 'Math', 'Sex'});
+
+    % Remove outliers, extreme z-scores, on either measure.
+    idx_remove = unique([find(abs(tb.xVar) >= 2.5); find(abs(tb.Math) >= 2.5)]);
+    if ~isempty(idx_remove); tb(idx_remove, :) = []; end
+    clear idx_remove
     
     %Check correlation between Sex and Math
     P = 'Math ~ Sex'; 
-    mdl1 = fitlm(tbl, P);
-      
-    %z-score xVar and Math    
-    xVar = zscore(xVar, [], 'omitnan');
-    Math = zscore(Math, [], 'omitnan');
-
+    mdl1 = fitlm(tb, P);
+    
     %%defining the line to fit the model to
     Q = 'Math ~ xVar';
-
+    
     %generating the model
-    mdl = fitlm(tbl, Q);
+    mdl = fitlm(tb, Q);
     
     %get appropriate RGB color for tract by indexing into colorProfiles.csv
     idx = find(strcmp(colorProfiles.NameOfTrack, char(tractIDs(t))) == 1);
@@ -162,12 +169,12 @@ for t = 1:length(tractIDs)
     clf;
 
     %Remove outliers
-    tbl(outliers, :) = []; 
+    tb(outliers, :) = []; 
 
     %recalculate the model
 
     %generating the model
-    mdl = fitlm(tbl, Q);
+    mdl = fitlm(tb, Q);
 
     %clear the figure
     clf(figure(nfig));
@@ -216,11 +223,7 @@ for t = 1:length(tractIDs)
     ylabel('Math Score');
     
     n = size(Math, 1);
-    %text(-2.8, 2.2, ['rmse = ' num2str(mdl.RMSE)])
-    %text(-2.8, 2.0, ['beta = ' num2str(mdl.Coefficients{2,1})])
-    %text(-2.8, 1.8, ['p = ' num2str(mdl.Coefficients.pValue(2))])
-    %text(-2.8, 1.6, ['n = ' num2str(n)]);
-    
+   
     rsqSimpleLinMath.beta(t) = mdl.Coefficients{2,1}; 
     rsqSimpleLinMath.n(t) = n; 
     rsqSimpleLinMath.p_value(t) = mdl.Coefficients.pValue(2); 
@@ -257,7 +260,7 @@ for t = 1:length(tractIDs)
     %maxX = floor(max(xData) * 100) / 100;
     %midX = floor(((min(xData) + max(xData))/2) * 100) / 100; 
     %set(gca, 'XLim', [minX maxX], 'XTick', [minX midX maxX]);
-    set(gca, 'XLim', [0.3 0.5], 'XTick', [0.3 0.4 0.5]);
+    set(gca, 'XLim', [-3 3], 'XTick', [-3 -2 -1 0 1 2 3]);
     xax.FontName = fontname;
     xax.FontSize = fontsize;
 
@@ -265,10 +268,16 @@ for t = 1:length(tractIDs)
     yax = get(gca,'yaxis');
     yax.TickDirection = 'out';
     yax.TickLength = [yticklength yticklength];
-    set(gca, 'YLim', [-5 10], 'YTick', [-5 0 5 10]);
+    set(gca, 'YLim', [-3 3], 'YTick', [-3 -2 -1 0 1 2 3]);
     yax.FontName = fontname;
     yax.FontSize = fontsize;
     yax.FontAngle = fontangle;
+    
+    %%%%%%To print on plots
+    text(-2.8, 2.2, ['rmse = ' num2str(mdl.RMSE)])
+    text(-2.8, 2.0, ['beta = ' num2str(mdl.Coefficients{2,1})])
+    text(-2.8, 1.8, ['p = ' num2str(mdl.Coefficients.pValue(2))])
+    text(-2.8, 1.6, ['n = ' num2str(n)]);
 
     %change figure background to white
     set(gcf, 'color', 'w')
@@ -281,7 +290,7 @@ for t = 1:length(tractIDs)
     plotTitle = {char(tractIDs(t))};
     plotTitle = strjoin(['Simple Linear Model for', plotTitle]);
     title(plotTitle);
-    xlabel(measure);
+    xlabel(wmmeasure);
     ylabel('Math Scores');
     
     %export figure as a png file
@@ -355,23 +364,30 @@ for t = 1:length(tractIDs)
     
     tbl(any(ismissing(tbl), 2), :) = [];
     
-    Read = tbl.Read; 
-    xVar = tbl.xVar; 
-    Sex = tbl.Sex; 
+    %z-score xVar and Math    
+    xVar = zscore(tbl.xVar, [], 'omitnan');
+    Read = zscore(tbl.Read, [], 'omitnan');
+    Sex = tbl.Sex;
+
+    % Subsetting tbl into tb so that outlier removals from this
+    % point on do not affect all of the other tracts and behavioral
+    % measures contained in tbl.
+    tb = array2table([xVar Read Sex], 'VariableNames', {'xVar', 'Read', 'Sex'});
+
+    % Remove outliers, extreme z-scores, on either measure.
+    idx_remove = unique([find(abs(tb.xVar) >= 2.5); find(abs(tb.Read) >= 2.5)]);
+    if ~isempty(idx_remove); tb(idx_remove, :) = []; end
+    clear idx_remove
     
     %Check correlation between Sex and Math
     P = 'Read ~ Sex'; 
-    mdl2 = fitlm(tbl, P);
-      
-    %z-score xVar and Math    
-    xVar = zscore(xVar, [], 'omitnan');
-    Read = zscore(Read, [], 'omitnan');
-
+    mdl2 = fitlm(tb, P);
+    
     %%defining the line to fit the model to
     Q = 'Read ~ xVar';
-
+    
     %generating the model
-    mdl = fitlm(tbl, Q);
+    mdl = fitlm(tb, Q);
     
     %get appropriate RGB color for tract by indexing into colorProfiles.csv
     idx = find(strcmp(colorProfiles.NameOfTrack, char(tractIDs(t))) == 1);
@@ -425,12 +441,12 @@ for t = 1:length(tractIDs)
     clf;
 
     %Remove outliers
-    tbl(outliers, :) = []; 
+    tb(outliers, :) = []; 
 
     %recalculate the model
 
     %generating the model
-    mdl = fitlm(tbl, Q);
+    mdl = fitlm(tb, Q);
 
     %clear the figure
     clf(figure(nfig));
@@ -477,16 +493,11 @@ for t = 1:length(tractIDs)
     xlabel('fa');
     %%%%%%Not a variable
     ylabel('Read Score');
-    
-    n = size(Read, 1);
-    %text(-2.8, 1.6, ['n = ' num2str(n)]);
-    %text(-2.8, 2.2, ['rmse = ' num2str(mdl.RMSE)])
-    %text(-2.8, 2.0, ['beta = ' num2str(mdl.Coefficients{2,1})])
-    %text(-2.8, 1.8, ['p = ' num2str(mdl.Coefficients.pValue(2))])
 
     %set scale of y-axis
     %ylim([0.3 0.6])
 
+    n = size(Read, 1);
     %add adjusted r squared to table.
     rsqSimpleLinRead.beta(t) = mdl.Coefficients{2,1}; 
     rsqSimpleLinRead.n(t) = n; 
@@ -512,7 +523,7 @@ for t = 1:length(tractIDs)
     yticklength = 0;
     xticklength = 0.02;
 
-    % xaxis
+     % xaxis
     xax = get(gca, 'xaxis');
     xax.TickDirection = 'out';
     xax.TickLength = [xticklength xticklength];
@@ -520,7 +531,7 @@ for t = 1:length(tractIDs)
     %maxX = floor(max(xData) * 100) / 100;
     %midX = floor(((min(xData) + max(xData))/2) * 100) / 100; 
     %set(gca, 'XLim', [minX maxX], 'XTick', [minX midX maxX]);
-    set(gca, 'XLim', [0.3 0.5], 'XTick', [0.3 0.4 0.5]);
+    set(gca, 'XLim', [-3 3], 'XTick', [-3 -2 -1 0 1 2 3]);
     xax.FontName = fontname;
     xax.FontSize = fontsize;
 
@@ -528,10 +539,16 @@ for t = 1:length(tractIDs)
     yax = get(gca,'yaxis');
     yax.TickDirection = 'out';
     yax.TickLength = [yticklength yticklength];
-    set(gca, 'YLim', [-5 20], 'YTick', [-5 0 5 10 15 20]);
+    set(gca, 'YLim', [-3 3], 'YTick', [-3 -2 -1 0 1 2 3]);
     yax.FontName = fontname;
     yax.FontSize = fontsize;
     yax.FontAngle = fontangle;
+    
+    %%%%%%To print on plots
+    text(-2.8, 2.2, ['rmse = ' num2str(mdl.RMSE)])
+    text(-2.8, 2.0, ['beta = ' num2str(mdl.Coefficients{2,1})])
+    text(-2.8, 1.8, ['p = ' num2str(mdl.Coefficients.pValue(2))])
+    text(-2.8, 1.6, ['n = ' num2str(n)]);
 
     %change figure background to white
     set(gcf, 'color', 'w')
@@ -544,7 +561,7 @@ for t = 1:length(tractIDs)
     plotTitle = {char(tractIDs(t))};
     plotTitle = strjoin(['Simple Linear Model for', plotTitle]);
     title(plotTitle);
-    xlabel(measure);
+    xlabel(wmmeasure);
     ylabel('Read Scores');
     
     %export figure as a png file
