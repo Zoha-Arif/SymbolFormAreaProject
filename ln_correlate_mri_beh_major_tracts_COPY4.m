@@ -5,7 +5,7 @@
 wmmeasure = 'fa';
 
 % Hemisphere
-hemisphere = 'left'; %left, right, both
+hemisphere = 'right'; %left, right, both
 
 % Set working directories.
 %w_measures = {'fa', 'md'}; % 'md', 'ad', 'md', 'rd', 'ndi', 'isovf', 'odi', 'map', 'T1', 'R1';
@@ -91,29 +91,24 @@ for t = 1:length(tractIDs)
     
     tbl(any(ismissing(tbl), 2), :) = [];
     
-%     Math = tbl.Math; 
-%     xVar = tbl.xVar; 
-%     Sex = tbl.Sex; 
-      
     %z-score xVar and Math    
     xVar = zscore(tbl.xVar, [], 'omitnan');
     Math = zscore(tbl.Math, [], 'omitnan');
+    Sex = tbl.Sex;
 
-    % @Zoha -- I am adding this here so that outlier removals from this
+    % Subsetting tbl into tb so that outlier removals from this
     % point on do not affect all of the other tracts and behavioral
-    % measures contained in tbl. I see that you are recreating tbl with
-    % each loop, so it's not super important, but it helps keep things more
-    % easily interpretable.
-    tb = array2table([xVar Math], 'VariableNames', {'xVar', 'Math'});
+    % measures contained in tbl.
+    tb = array2table([xVar Math Sex], 'VariableNames', {'xVar', 'Math', 'Sex'});
 
     % Remove outliers, extreme z-scores, on either measure.
     idx_remove = unique([find(abs(tb.xVar) >= 2.5); find(abs(tb.Math) >= 2.5)]);
     if ~isempty(idx_remove); tb(idx_remove, :) = []; end
     clear idx_remove
-
-%     %Check correlation between Sex and Math
-%     P = 'Math ~ Sex'; 
-%     mdlMSex = fitlm(tbl, P);
+    
+    %Check correlation between Sex and Math
+    P = 'Math ~ Sex'; 
+    mdlMSex = fitlm(tb, P);
     
     %%defining the line to fit the model to
     Q = 'Math ~ xVar';
@@ -225,11 +220,6 @@ for t = 1:length(tractIDs)
     ylabel('Math Score');
     
     n = size(Math, 1);
-    %%%%%%%To print on plots
-    %text(-2.8, 2.2, ['rmse = ' num2str(mdl.RMSE)])
-    %text(-2.8, 2.0, ['beta = ' num2str(mdl.Coefficients{2,1})])
-    %text(-2.8, 1.8, ['p = ' num2str(mdl.Coefficients.pValue(2))])
-    %text(-2.8, 1.6, ['n = ' num2str(n)]);
     
     rsqSimpleLinMath.beta(t) = mdl.Coefficients{2,1}; 
     rsqSimpleLinMath.n(t) = n; 
@@ -365,24 +355,31 @@ for t = 1:length(tractIDs)
     tbl.Properties.VariableNames{'Data'} = 'Read';
     
     tbl(any(ismissing(tbl), 2), :) = [];
-    
-    Read = tbl.Read; 
-    xVar = tbl.xVar; 
-    Sex = tbl.Sex; 
       
     %z-score xVar and Math    
-    xVar = zscore(xVar, [], 'omitnan');
-    Read = zscore(Read, [], 'omitnan');
+    xVar = zscore(tbl.xVar, [], 'omitnan');
+    Read = zscore(tbl.Read, [], 'omitnan');
+    Sex = tbl.Sex; 
     
-    %Check correlation between Sex and Math
-    P = 'Read ~ Sex'; 
-    mdlRSex = fitlm(tbl, P);
+    % Subsetting tbl into tb so that outlier removals from this
+    % point on do not affect all of the other tracts and behavioral
+    % measures contained in tbl.
+    tb = array2table([xVar Read Sex], 'VariableNames', {'xVar', 'Read', 'Sex'});
 
+    % Remove outliers, extreme z-scores, on either measure.
+    idx_remove = unique([find(abs(tb.xVar) >= 2.5); find(abs(tb.Read) >= 2.5)]);
+    if ~isempty(idx_remove); tb(idx_remove, :) = []; end
+    clear idx_remove
+
+     %Check correlation between Sex and Math
+     P = 'Read ~ Sex'; 
+     mdlRSex = fitlm(tb, P);
+    
     %%defining the line to fit the model to
     Q = 'Read ~ xVar';
 
     %generating the model
-    mdl = fitlm(tbl, Q);
+    mdl = fitlm(tb, Q);
     
     %get appropriate RGB color for tract by indexing into colorProfiles.csv
     idx = find(strcmp(colorProfiles.NameOfTrack, char(tractIDs(t))) == 1);
@@ -436,12 +433,12 @@ for t = 1:length(tractIDs)
     clf;
 
     %Remove outliers
-    tbl(outliers, :) = []; 
+    tb(outliers, :) = []; 
 
     %recalculate the model
 
     %generating the model
-    mdl = fitlm(tbl, Q);
+    mdl = fitlm(tb, Q);
 
    %clear the figure
     clf(figure(nfig));
@@ -481,15 +478,10 @@ for t = 1:length(tractIDs)
     %fitHandle2 = findobj(w,'DisplayName','Fit');
     %set(fitHandle2, 'Visible', 'off')
     
-    n = size(Read, 1);
-    %text(-2.8, 1.6, ['n = ' num2str(n)]);
-    %text(-2.8, 2.2, ['rmse = ' num2str(mdl.RMSE)])
-    %text(-2.8, 2.0, ['beta = ' num2str(mdl.Coefficients{2,1})])
-    %text(-2.8, 1.8, ['p = ' num2str(mdl.Coefficients.pValue(2))])
-
     %set scale of y-axis
     %ylim([0.3 0.6])
 
+    n = size(Read, 1);
     %add adjusted r squared to table.
     rsqSimpleLinRead.beta(t) = mdl.Coefficients{2,1}; 
     rsqSimpleLinRead.n(t) = n; 
@@ -528,7 +520,7 @@ for t = 1:length(tractIDs)
     %maxX = floor(max(xData) * 100) / 100;
     %midX = floor(((min(xData) + max(xData))/2) * 100) / 100; 
     %set(gca, 'XLim', [minX maxX], 'XTick', [minX midX maxX]);
-    set(gca, 'XLim', [0.3 0.5], 'XTick', [0.3 0.4 0.5]);
+    set(gca, 'XLim', [-3 3], 'XTick', [-3 -2 -1 0 1 2 3]);
     xax.FontName = fontname;
     xax.FontSize = fontsize;
 
@@ -536,10 +528,16 @@ for t = 1:length(tractIDs)
     yax = get(gca,'yaxis');
     yax.TickDirection = 'out';
     yax.TickLength = [yticklength yticklength];
-    set(gca, 'YLim', [-5 20], 'YTick', [-5 0 5 10 15 20]);
+    set(gca, 'YLim', [-3 3], 'YTick', [-3 -2 -1 0 1 2 3]);
     yax.FontName = fontname;
     yax.FontSize = fontsize;
     yax.FontAngle = fontangle;
+
+    %%%%To print plots
+    text(-2.8, 1.6, ['n = ' num2str(n)]);
+    text(-2.8, 2.2, ['rmse = ' num2str(mdl.RMSE)])
+    text(-2.8, 2.0, ['beta = ' num2str(mdl.Coefficients{2,1})])
+    text(-2.8, 1.8, ['p = ' num2str(mdl.Coefficients.pValue(2))])
 
     %change figure background to white
     set(gcf, 'color', 'w')
@@ -552,7 +550,7 @@ for t = 1:length(tractIDs)
     plotTitle = {char(tractIDs(t))};
     plotTitle = strjoin(['Simple Linear Model for', plotTitle]);
     title(plotTitle);
-    xlabel(measure);
+    xlabel(wmmeasure);
     ylabel('Read Scores');
     
     %export figure as a png file
@@ -573,58 +571,68 @@ end
  pArcTBL = table(d.subIDs, d.(char(strcat(hemisphere, tractIDs(2)))), 'VariableNames', {'Subject', 'Data'});
  pArcTBL = pArcTBL(~any(ismissing(pArcTBL), 2), :);
  pArcTBL = sortrows(pArcTBL); 
- mask = ismember(ReadTBL.Subject, pArcTBL.Subject);
- ReadTBL = ReadTBL(mask, :); 
- mask2 = ismember(pArcTBL.Subject, ReadTBL.Subject);
- pArcTBL = pArcTBL(mask2, :); 
  
  %tpc
  tpcTBL = table(d.subIDs, d.(char(strcat(hemisphere, tractIDs(3)))), 'VariableNames', {'Subject', 'Data'});
  tpcTBL = tpcTBL(~any(ismissing(tpcTBL), 2), :);
  tpcTBL = sortrows(tpcTBL); 
- mask = ismember(ReadTBL.Subject, tpcTBL.Subject);
- ReadTBL = ReadTBL(mask, :); 
- mask2 = ismember(tpcTBL.Subject, ReadTBL.Subject);
- tpcTBL = tpcTBL(mask2, :); 
  
  %MDLfang
  MDLfangTBL = table(d.subIDs, d.(char(strcat(hemisphere, tractIDs(4)))), 'VariableNames', {'Subject', 'Data'});
  MDLfangTBL = MDLfangTBL(~any(ismissing(MDLfangTBL), 2), :);
  MDLfangTBL = sortrows(MDLfangTBL); 
- mask = ismember(ReadTBL.Subject, MDLfangTBL.Subject);
- ReadTBL = ReadTBL(mask, :); 
- mask2 = ismember(MDLfangTBL.Subject, ReadTBL.Subject);
- MDLfangTBL = MDLfangTBL(mask2, :); 
  
  %MDLFspl
  MDLFsplTBL = table(d.subIDs, d.(char(strcat(hemisphere, tractIDs(5)))), 'VariableNames', {'Subject', 'Data'});
  MDLFsplTBL = MDLFsplTBL(~any(ismissing(MDLFsplTBL), 2), :);
  MDLFsplTBL = sortrows(MDLFsplTBL); 
- mask = ismember(ReadTBL.Subject, MDLFsplTBL.Subject);
- ReadTBL = ReadTBL(mask, :); 
- mask2 = ismember(MDLFsplTBL.Subject, ReadTBL.Subject);
- MDLFsplTBL = MDLFsplTBL(mask2, :); 
+
+ %Merge Tables
+ tblMerge = innerjoin(ReadTBL, pArcTBL, 'Keys', 'Subject');
+ %Rename Headers
+ tblMerge.Properties.VariableNames{'Data_ReadTBL'} = 'Read';
+ tblMerge.Properties.VariableNames{'Data_pArcTBL'} = 'pArc';
  
- tbl = table(ReadTBL.Data, pArcTBL.Data, tpcTBL.Data, MDLfangTBL.Data, MDLFsplTBL.Data, 'VariableNames', {'Read', 'pArc', 'TPC', 'MDLfang', 'MDLFspl'}); 
+ tblMerge1 = innerjoin(tblMerge, tpcTBL, 'Keys', 'Subject');
+ %Rename Headers
+ tblMerge1.Properties.VariableNames{'Data'} = 'tpc';
+ 
+ tblMerge2 = innerjoin(tblMerge1, MDLfangTBL, 'Keys', 'Subject');
+ %Rename Headers
+ tblMerge2.Properties.VariableNames{'Data'} = 'MDLfang';
+ 
+ tbl = innerjoin(tblMerge2, MDLFsplTBL, 'Keys', 'Subject');
+ %Rename Headers
+ tbl.Properties.VariableNames{'Data'} = 'MDLFspl';
  tbl(any(ismissing(tbl), 2), :) = [];
 
  Read = tbl.Read; 
  pArc = tbl.pArc; 
- TPC = tbl.TPC; 
+ TPC = tbl.tpc; 
  MDLfang = tbl.MDLfang; 
  MDLFspl = tbl.MDLFspl; 
     
+ Read = zscore(Read, [], 'omitnan');
  pArc = zscore(pArc, [], 'omitnan');
  TPC = zscore(TPC, [], 'omitnan');
  MDLfang = zscore(MDLfang, [], 'omitnan');
  MDLFspl = zscore(MDLFspl, [], 'omitnan');
- Read = zscore(Read, [], 'omitnan');
-
-
-Q = 'Read ~ pArc + TPC + MDLfang + MDLFspl';
-
-%generating the model
-mdlRead = fitlm(tbl, Q);
+ 
+ % Subsetting tbl into tb so that outlier removals from this
+ % point on do not affect all of the other tracts and behavioral
+ % measures contained in tbl.
+ tb = array2table([Read pArc TPC MDLfang MDLFspl], 'VariableNames', {'Read', 'pArc', 'TPC', 'MDLfang', 'MDLFspl'});
+ 
+ % Remove outliers, extreme z-scores, on either measure.
+ idx_remove = unique([find(abs(tb.Read) >= 2.5); find(abs(tb.pArc) >= 2.5); find(abs(tb.TPC) >= 2.5); 
+     find(abs(tb.MDLfang) >= 2.5); find(abs(tb.MDLFspl) >= 2.5)]);
+ if ~isempty(idx_remove); tb(idx_remove, :) = []; end
+ clear idx_remove
+ 
+ Q = 'Read ~ pArc + TPC + MDLfang + MDLFspl';
+ 
+ %generating the model
+ mdlRead = fitlm(tb, Q);
 
 %%%%%%%%%%%%%%MULTIPLE VARIABLE MODEL -- MATH %%%%%%%%%%%%%%%%%%%%%
 %%defining the line to fit the model to
@@ -636,58 +644,68 @@ mdlRead = fitlm(tbl, Q);
  pArcTBL = table(d.subIDs, d.(char(strcat(hemisphere, tractIDs(2)))), 'VariableNames', {'Subject', 'Data'});
  pArcTBL = pArcTBL(~any(ismissing(pArcTBL), 2), :);
  pArcTBL = sortrows(pArcTBL); 
- mask = ismember(MathTBL.Subject, pArcTBL.Subject);
- MathTBL = MathTBL(mask, :); 
- mask2 = ismember(pArcTBL.Subject, MathTBL.Subject);
- pArcTBL = pArcTBL(mask2, :); 
  
  %tpc
  tpcTBL = table(d.subIDs, d.(char(strcat(hemisphere, tractIDs(3)))), 'VariableNames', {'Subject', 'Data'});
  tpcTBL = tpcTBL(~any(ismissing(tpcTBL), 2), :);
  tpcTBL = sortrows(tpcTBL); 
- mask = ismember(MathTBL.Subject, tpcTBL.Subject);
- MathTBL = MathTBL(mask, :); 
- mask2 = ismember(tpcTBL.Subject, MathTBL.Subject);
- tpcTBL = tpcTBL(mask2, :); 
  
  %MDLfang
  MDLfangTBL = table(d.subIDs, d.(char(strcat(hemisphere, tractIDs(4)))), 'VariableNames', {'Subject', 'Data'});
  MDLfangTBL = MDLfangTBL(~any(ismissing(MDLfangTBL), 2), :);
  MDLfangTBL = sortrows(MDLfangTBL); 
- mask = ismember(MathTBL.Subject, MDLfangTBL.Subject);
- MathTBL = MathTBL(mask, :); 
- mask2 = ismember(MDLfangTBL.Subject, MathTBL.Subject);
- MDLfangTBL = MDLfangTBL(mask2, :); 
  
  %MDLFspl
  MDLFsplTBL = table(d.subIDs, d.(char(strcat(hemisphere, tractIDs(5)))), 'VariableNames', {'Subject', 'Data'});
  MDLFsplTBL = MDLFsplTBL(~any(ismissing(MDLFsplTBL), 2), :);
  MDLFsplTBL = sortrows(MDLFsplTBL); 
- mask = ismember(MathTBL.Subject, MDLFsplTBL.Subject);
- MathTBL = MathTBL(mask, :); 
- mask2 = ismember(MDLFsplTBL.Subject, MathTBL.Subject);
- MDLFsplTBL = MDLFsplTBL(mask2, :); 
+
+ %Merge Tables
+ tblMerge = innerjoin(MathTBL, pArcTBL, 'Keys', 'Subject');
+ %Rename Headers
+ tblMerge.Properties.VariableNames{'Data_MathTBL'} = 'Math';
+ tblMerge.Properties.VariableNames{'Data_pArcTBL'} = 'pArc';
  
- tbl = table(MathTBL.Data, pArcTBL.Data, tpcTBL.Data, MDLfangTBL.Data, MDLFsplTBL.Data, 'VariableNames', {'Math', 'pArc', 'TPC', 'MDLfang', 'MDLFspl'}); 
+ tblMerge1 = innerjoin(tblMerge, tpcTBL, 'Keys', 'Subject');
+ %Rename Headers
+ tblMerge1.Properties.VariableNames{'Data'} = 'tpc';
+ 
+ tblMerge2 = innerjoin(tblMerge1, MDLfangTBL, 'Keys', 'Subject');
+ %Rename Headers
+ tblMerge2.Properties.VariableNames{'Data'} = 'MDLfang';
+ 
+ tbl = innerjoin(tblMerge2, MDLFsplTBL, 'Keys', 'Subject');
+ %Rename Headers
+ tbl.Properties.VariableNames{'Data'} = 'MDLFspl';
  tbl(any(ismissing(tbl), 2), :) = [];
 
  Math = tbl.Math; 
  pArc = tbl.pArc; 
- TPC = tbl.TPC; 
+ TPC = tbl.tpc; 
  MDLfang = tbl.MDLfang; 
  MDLFspl = tbl.MDLFspl; 
     
+ Math = zscore(Math, [], 'omitnan');
  pArc = zscore(pArc, [], 'omitnan');
  TPC = zscore(TPC, [], 'omitnan');
  MDLfang = zscore(MDLfang, [], 'omitnan');
  MDLFspl = zscore(MDLFspl, [], 'omitnan');
- Math = zscore(Math, [], 'omitnan');
-
-
-Q = 'Math ~ pArc + TPC + MDLfang + MDLFspl';
-
-%generating the model
-mdlMath = fitlm(tbl, Q);
+ 
+ % Subsetting tbl into tb so that outlier removals from this
+ % point on do not affect all of the other tracts and behavioral
+ % measures contained in tbl.
+ tb = array2table([Math pArc TPC MDLfang MDLFspl], 'VariableNames', {'Math', 'pArc', 'TPC', 'MDLfang', 'MDLFspl'});
+ 
+ % Remove outliers, extreme z-scores, on either measure.
+ idx_remove = unique([find(abs(tb.Math) >= 2.5); find(abs(tb.pArc) >= 2.5); find(abs(tb.TPC) >= 2.5); 
+     find(abs(tb.MDLfang) >= 2.5); find(abs(tb.MDLFspl) >= 2.5)]);
+ if ~isempty(idx_remove); tb(idx_remove, :) = []; end
+ clear idx_remove
+ 
+ Q = 'Math ~ pArc + TPC + MDLfang + MDLFspl';
+ 
+ %generating the model
+ mdlMath = fitlm(tb, Q);
 
 %============== Export rsqTable as a csv ==============
 %local path to save table: 
