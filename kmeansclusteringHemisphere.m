@@ -1,4 +1,4 @@
-%clear all; close all; clc;
+clear all; close all; clc;
 %% ====================================================================== %%
 
 % Set working directories.
@@ -28,7 +28,7 @@ read = d.T2_WJIV_LWID_raw - d.T1_WJIV_LWID_raw;
 
 %%%%%%%%%%%%%% kmeans & silhouette score for various k-values %%%%%%%%%%%%%% 
 % Define range of k values to try
-kValues = 2;
+kValues = 4;
 % Iterate over different values of k
 
 %generate column of tracts of interest ids
@@ -171,6 +171,9 @@ bestk = table('Size',[numRows, numCols], 'VariableNames', varNames, 'VariableTyp
 
 rowNum = 1; 
 subIDs = unique(optkTBL.Subject); 
+
+bigTable = [];
+
 for s = 1:length(subIDs)
     for g = 1:length(tractIDs)
         %get subject
@@ -231,14 +234,20 @@ for s = 1:length(subIDs)
                 
                 % Determine brightness for current cluster based on source
                 brightness = ones(size(clusterData, 1), 1); % Initialize brightness
+                edgeColor = ones(size(clusterData, 1), 1); % Initialize brightness
+                
                 for p = 1:size(clusterData, 1)
                     if strcmp(tempData.sourceData(p), "NFA")
-                        brightness(p) = 1; % Light source
+                        %edgeColor(p) = 1; % Light source
+                        brightness(p) = 1;
                     else
-                        brightness(p) = 0.5; % Dark source
+                        %edgeColor(p) = 0; % Dark source
+                        brightness(p) = 0.5;
                     end
                 end
                 
+                %To only produce graphs with light and dark, change
+                %colors(v, :) to colors(1,:).
                 scatter3(clusterData(:, 1), clusterData(:,2), clusterData(:,3), [], brightness .* colors(v, :), 'filled'); 
             end
             
@@ -253,9 +262,93 @@ for s = 1:length(subIDs)
             xlabel('X');
             ylabel('Y');
             zlabel('Z');
+          
             hold off;
             
             %%%%%%%% END OF PLOTS %%%%%%%%
+            
+            %%%%%%%% Percent Correct Classification %%%%%%%%
+            
+            idx = 1; 
+            
+            %generate appropriate number of tables
+            
+            % Define the category variable
+            categoryVariable = {'VWFA', 'NFA'};
+            
+            % Generate all permutations for each value of k
+            all_permutations = cell(length(k), 1);
+            
+            % Generate all combinations of selecting k/2 positions out of k for "VWFA"
+            combinations = nchoosek(1:k, k/2);
+            num_combinations = size(combinations, 1);
+            permutations = cell(num_combinations, 1);
+            
+            % Define the dimensions of each table
+            numRows = length(permutations);
+            numCols = 1;
+            
+            % Generate random values for the table
+            columnData = rand(numRows, 1);
+            
+            percentTBL = array2table(columnData, 'VariableNames', {'cluster'});
+            percentTBL.correctSFA = cell(numRows, 1);
+            percentTBL.percentCorrect = zeros(numRows, 1);
+            
+            for ii = 1:num_combinations
+                permutation = cell(1, k);
+                permutation(combinations(ii, :)) = {'VWFA'};
+                permutation(~ismember(1:k, combinations(ii, :))) = {'NFA'};
+                permutations{ii} = permutation;
+            end
+            all_permutations{idx} = permutations;
+
+            % Store all possible unique permutations
+            curRow = 1; 
+            
+            for o = 1:numel(all_permutations{idx})
+                for oo = 1:k
+                    percentTBL.correctSFA(curRow) = all_permutations{idx}{o}(oo); 
+                    curRow = curRow + 1; 
+                end
+            end
+            
+            repeated_sequence = repmat(1:k, 1, ceil(numRows));
+            repeated_sequence = transpose(repeated_sequence);
+            percentTBL.cluster = repeated_sequence;
+            
+            combinedData = table(data, string(sourceData), 'VariableNames', {'data', 'sourceData'});
+            idx = rowWithMaxSilScore.idx{1};
+            
+            for v = 1:k
+                tempData = combinedData(idx == v, :); 
+                clusterData = combinedData.data(idx == v, :); 
+                
+                for vv = 1:length(categoryVariable)
+                    numCorrect = 0; 
+                    
+                    allRowsIDX = find(percentTBL.cluster == v & strcmp(percentTBL.correctSFA, categoryVariable{vv}(1, :)));
+                    
+                    
+                    for p = 1:size(clusterData, 1)
+                        if strcmp(tempData.sourceData(p), string(categoryVariable{vv}(1, :)))
+                            numCorrect = numCorrect + 1; 
+                        end
+                    end
+                    
+                   for u = 1:size(allRowsIDX, 1)
+                       percentTBL.percentCorrect(allRowsIDX(u)) = numCorrect / size(clusterData, 1); 
+                   end
+                
+                end 
+            end
+            
+            stringToReplicate = ([num2str(subIDs(s)) ' for ' char(tractIDs(g))]);
+            percentTBL.subTract = repmat({stringToReplicate}, height(percentTBL), 1);
+            
+            bigTable = vertcat(bigTable, percentTBL);
+            
+            %%%%%%%% End of Percent Correct Classification %%%%%%%% 
             
             %export figure as a png file
             mainpath = '/Volumes/LANDLAB/projects/sfa/supportFiles/final-plots-kmeans';
@@ -266,6 +359,12 @@ for s = 1:length(subIDs)
         end
      end
 end
+
+%Save BigTable
+mainpath = '/Volumes/LANDLAB/projects/sfa/supportFiles/';
+filename = strjoin(['silHem_percCorrect_k_' string(kValues) '.csv']); % Define a filename for each plot
+fullFilePath = fullfile(mainpath, filename); % Create the full file path
+writetable(bigTable, fullFilePath);
 
 %%%%%%%%%%%%%% Correlate Silhouette Scores with Math & Reading %%%%%%%%%%%%%% 
 rsqTBLMath = table(tractIDs'); 
