@@ -1,8 +1,8 @@
 # 🧠 Symbol Form Area Project
 
-This project investigates how white matter microstructure supports individual differences in reading and math development in children.
+This project investigates how white matter microstructure supports individual differences in reading and math development in children; the primary objective was to understand how structural brain networks contribute to symbol-based learning and how differences in tissue properties relate to cognitive variability in academic domains like reading and math.
 
-Specifically, we analyzed the relationship between tissue properties of structurally connected brain regions using cognitive performance in reading and math and the following diffusion metrics Fractional Anisotropy (FA), Mean Diffusivity (MD), Orientation Dispersion Index (ODI), and Neurite Density Index (NDI).
+We analyzed the relationship between tissue properties of structurally connected brain regions using cognitive performance in reading and math and the following diffusion metrics Fractional Anisotropy (FA), Mean Diffusivity (MD), Orientation Dispersion Index (ODI), and Neurite Density Index (NDI).
 
 Behavioral scores were collected at two timepoints (T1 and T2), and we examined change scores (T2 - T1) to assess learning-related gains.
 
@@ -15,12 +15,6 @@ Behavioral scores were collected at two timepoints (T1 and T2), and we examined 
 - Data visualization and figure creation for manuscript preparation
 - Longitudinal behavioral modeling of reading and math performance changes
 - Integration of neuroimaging (tractography-based connectivity) and behavioral data
-
----
-
-### 📈 Objective
-
-To understand how structural brain networks contribute to symbol-based learning and how differences in tissue properties relate to cognitive variability in academic domains like reading and math.
 
 ---
 
